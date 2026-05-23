@@ -11,10 +11,88 @@ function init() {
 
   const hero = document.getElementById('hero');
   if (hero) {
+    const SCATTERED_STICKERS = [
+      { src: 'sticker-4.png', top: '15%', left: '2%', rotate: '-12deg', width: 'clamp(70px, 12vw, 110px)', delay: '0s' },
+      { src: 'sticker-5.png', top: '65%', left: '4%', rotate: '7deg', width: 'clamp(80px, 14vw, 120px)', delay: '-1.2s' },
+      { src: 'sticker-6.png', top: '10%', right: '2%', rotate: '18deg', width: 'clamp(90px, 15vw, 130px)', delay: '-0.5s' },
+      { src: 'sticker-7.png', bottom: '5%', right: '5%', rotate: '-8deg', width: 'clamp(100px, 16vw, 140px)', delay: '-2.1s', mobileHide: true },
+    ];
+
+    const stickersHtml = SCATTERED_STICKERS.map(s => `
+      <img 
+        src="static/assets/landingPage/${s.src}" 
+        class="hero__sticker ${s.mobileHide ? 'hero__sticker--desktop-only' : ''}"
+        style="
+          ${s.top ? `top: ${s.top};` : ''}
+          ${s.bottom ? `bottom: ${s.bottom};` : ''}
+          ${s.left ? `left: ${s.left};` : ''}
+          ${s.right ? `right: ${s.right};` : ''}
+          --rotate-base: ${s.rotate};
+          width: ${s.width};
+          animation-delay: ${s.delay};
+        "
+        alt=""
+        onerror="this.remove()"
+      >
+    `).join('');
+
     hero.innerHTML = `
-      <h1>Drop a photo. See six takes.</h1>
-      <p>AI suggests memes built around YOUR photo. Pick one. Edit. Ship.</p>
+      <div class="hero__ticker">
+        <div class="hero__ticker-track">
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
+        </div>
+      </div>
+      
+      <div class="hero__content">
+        ${stickersHtml}
+        
+        <div class="hero__polaroids">
+          <div class="hero__polaroid" style="--rot: -6deg; --z: 1;">
+            <img src="static/assets/landingPage/sticker-1.png" alt="" onerror="this.parentElement.style.display='none'">
+          </div>
+          <div class="hero__polaroid" style="--rot: 4deg; --z: 3;">
+            <img src="static/assets/landingPage/sticker-2.png" alt="" onerror="this.parentElement.style.display='none'">
+          </div>
+          <div class="hero__polaroid" style="--rot: -2deg; --z: 2;">
+            <img src="static/assets/landingPage/sticker-3.png" alt="" onerror="this.parentElement.style.display='none'">
+          </div>
+        </div>
+
+        <div class="hero__badge">PIN THIS TO YOUR GROUP CHAT</div>
+        
+        <h1 class="hero__headline">
+          DROP A PHOTO.<br>
+          SEE <span class="hero__highlight">
+            <span class="hero__highlight-text" id="heroHighlight">SIX TAKES.</span>
+          </span>
+        </h1>
+        
+        <p class="hero__sub">AI suggests memes built around YOUR photo. Pick one. Edit. Ship.</p>
+      </div>
     `;
+
+    const highlightWords = ['SIX TAKES.', 'THE MAGIC.', 'THE VIBES.', 'YOUR BOSS.'];
+    let wordIdx = 0;
+    const highlightEl = document.getElementById('heroHighlight');
+
+    if (highlightEl) {
+      if (window.heroHighlightInterval) clearInterval(window.heroHighlightInterval);
+      
+      window.heroHighlightInterval = setInterval(() => {
+        wordIdx = (wordIdx + 1) % highlightWords.length;
+        highlightEl.style.opacity = '0';
+        highlightEl.style.transform = 'translateY(5px)';
+        
+        setTimeout(() => {
+          highlightEl.innerText = highlightWords[wordIdx];
+          highlightEl.style.opacity = '1';
+          highlightEl.style.transform = 'translateY(0)';
+        }, 200);
+      }, 2500);
+    }
   }
 
   const modeToggle = document.getElementById('modeToggle');

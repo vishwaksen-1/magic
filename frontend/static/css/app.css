@@ -764,3 +764,293 @@ img, svg, canvas { display: block; max-width: 100%; }
 .kept-card:hover { transform: translateY(-2px); border-color: var(--acid); }
 .kept-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kept-card__missing { display: grid; place-items: center; height: 100%; opacity: .4; }
+
+/* ── Landing dressing ─────────────────────────────────────── */
+
+#hero {
+  position: relative;
+  text-align: center;
+  padding: 6rem 1rem 4rem;
+  overflow: hidden; /* Safely clip scattered stickers and ticker overflow */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Subtle paper grid texture tied to the hero */
+#hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: 
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Marquee Ticker */
+.hero__ticker {
+  position: absolute;
+  top: 1.5rem;
+  left: -10vw;
+  width: 120vw;
+  background: var(--acid);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+  box-shadow: 0 4px 0 var(--ink);
+  z-index: 10;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+.hero__ticker-track {
+  display: inline-block;
+  /* Exactly translates the width of one span when using 4 identical spans */
+  animation: hero-marquee 25s linear infinite;
+}
+
+@keyframes hero-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-25%); }
+}
+
+/* Polaroids */
+.hero__polaroids {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+  margin-top: 2.5rem;
+}
+
+.hero__polaroid {
+  width: 80px;
+  height: 90px;
+  background: var(--paper);
+  padding: 4px 4px 16px 4px;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 10px rgba(12,12,10,0.15);
+  transform: rotate(var(--rot));
+  z-index: var(--z);
+  margin: 0 -10px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hero__polaroid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid rgba(12,12,10,0.05);
+}
+
+.hero__polaroid:hover {
+  transform: scale(1.15) rotate(0deg) translateY(-10px);
+  z-index: 10;
+}
+
+/* Typography */
+.hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero__badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 0.25rem 0.6rem;
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  transform: rotate(2deg);
+  box-shadow: 2px 2px 0 var(--acid);
+}
+
+.hero__headline {
+  font-family: var(--display);
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  line-height: 0.9;
+  color: var(--ink);
+  margin: 0 0 1.25rem;
+  text-transform: uppercase;
+}
+
+.hero__highlight {
+  position: relative;
+  display: inline-block;
+  color: var(--paper);
+  white-space: nowrap;
+  padding: 0 0.1em;
+  margin-left: 0.1em;
+}
+
+.hero__highlight::before {
+  content: "";
+  position: absolute;
+  inset: 0 -0.1em;
+  background: var(--acid);
+  z-index: -1;
+  transform: rotate(-1.5deg);
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Marker doodle underline */
+.hero__highlight::after {
+  content: "";
+  position: absolute;
+  bottom: -0.15em;
+  left: -0.2em;
+  right: -0.1em;
+  height: 5px;
+  background: var(--ink);
+  border-radius: 4px;
+  transform: rotate(1deg);
+  z-index: -2;
+}
+
+.hero__highlight-text {
+  display: inline-block;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-width: 4ch;
+}
+
+.hero__sub {
+  font-family: var(--body);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  color: var(--ink);
+  opacity: 0.85;
+  max-width: 540px;
+  margin: 0 auto 2rem;
+  line-height: 1.5;
+}
+
+/* Scattered Stickers */
+.hero__sticker {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 12px rgba(12,12,10,0.15));
+  transform: rotate(var(--rotate-base));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: hero-wobble 4s ease-in-out infinite alternate;
+}
+
+@keyframes hero-wobble {
+  0% { transform: translateY(0) rotate(var(--rotate-base)); }
+  100% { transform: translateY(-10px) rotate(calc(var(--rotate-base) + 3deg)); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero__sticker {
+    pointer-events: auto;
+  }
+  .hero__sticker:hover {
+    transform: scale(1.15) rotate(0deg) translateY(-5px) !important;
+    z-index: 20;
+    cursor: grab;
+  }
+}
+
+/* Tape on the composer dropzone */
+#photoDropzone {
+  position: relative;
+}
+
+#photoDropzone::before,
+#photoDropzone::after {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 16px;
+  background: rgba(240, 230, 160, 0.65);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(12,12,10,0.1);
+  z-index: 5;
+  pointer-events: none;
+}
+
+#photoDropzone::before {
+  top: -8px;
+  left: -12px;
+  transform: rotate(-25deg);
+}
+
+#photoDropzone::after {
+  bottom: -8px;
+  right: -12px;
+  transform: rotate(-15deg);
+}
+
+/* CTA Bob and floating sticker */
+.composer__actions {
+  position: relative;
+  z-index: 10;
+}
+
+#makeMemesBtn {
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#makeMemesBtn:hover {
+  transform: scale(1.02) rotate(-1deg);
+}
+
+#makeMemesBtn::after {
+  content: "";
+  position: absolute;
+  top: -24px;
+  right: -16px;
+  width: 48px;
+  height: 48px;
+  background: url('../assets/landingPage/sticker-8.png') center/contain no-repeat;
+  pointer-events: none;
+  transform: rotate(15deg);
+  animation: cta-bob 3s ease-in-out infinite alternate;
+  z-index: 2;
+  filter: drop-shadow(0 4px 6px rgba(12,12,10,0.15));
+}
+
+@keyframes cta-bob {
+  0% { transform: translateY(0) rotate(15deg); }
+  100% { transform: translateY(-8px) rotate(22deg); }
+}
+
+/* Responsiveness & A11y */
+@media (max-width: 720px) {
+  #hero { padding-top: 5rem; }
+  .hero__ticker { width: 150vw; font-size: 0.75rem; }
+  .hero__polaroids { transform: scale(0.85); margin-bottom: 1rem; }
+  .hero__sticker--desktop-only { display: none !important; }
+  .hero__sticker {
+    pointer-events: none !important;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__ticker-track, .hero__sticker, #makeMemesBtn::after {
+    animation: none;
+  }
+  .hero__highlight-text, .hero__sticker, .hero__polaroid {
+    transition: none;
+  }
+}
