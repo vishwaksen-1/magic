@@ -80,7 +80,6 @@ function init() {
 
   const photoDropzone = document.getElementById('photoDropzone');
   const photoInput = document.getElementById('photoInput');
-  const photoCameraInput = document.getElementById('photoCameraInput');
   const photoCameraBtn = document.getElementById('photoCameraBtn');
   const photoPreview = document.getElementById('photoPreview');
 
@@ -111,15 +110,10 @@ function init() {
     });
   }
 
-  if (photoCameraBtn && photoCameraInput) {
+  if (photoCameraBtn) {
     photoCameraBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      photoCameraInput.click();
-    });
-    photoCameraInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handlePhotoFile(e.target.files[0]);
-      }
+      openCameraModal();
     });
   }
 
@@ -147,6 +141,96 @@ function init() {
     // auto-brew immediately — user can refine with context and "Brew again" later.
     triggerBrew();
   }
+
+  // ─── Camera (getUserMedia) ────────────────────────────────────────
+  // `capture="environment"` on a file input only works on mobile — desktop
+  // browsers silently fall back to the file picker. To actually open the
+  // webcam everywhere, run a live MediaStream into a <video>, snap a frame
+  // off it, and feed the resulting blob through handlePhotoFile.
+  let _cameraStream = null;
+  let _cameraFacing = 'environment';
+
+  async function openCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    const video = document.getElementById('cameraVideo');
+    const snapBtn = document.getElementById('cameraSnapBtn');
+    const flipBtn = document.getElementById('cameraFlipBtn');
+    const closeBtn = document.getElementById('cameraCloseBtn');
+    if (!modal || !video || !snapBtn || !closeBtn) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      window.dispatch && window.dispatch('app:error', { message: "This browser can't access the camera. Try dragging a photo instead.", source: 'camera' });
+      return;
+    }
+
+    modal.classList.add('overlay--open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const startStream = async () => {
+      stopStream();
+      try {
+        _cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: _cameraFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = _cameraStream;
+      } catch (err) {
+        // Permission denied, no device, or insecure context.
+        window.dispatch && window.dispatch('app:error', { message: 'Camera blocked or unavailable. Check browser permissions.', source: 'camera' });
+        closeCameraModal();
+      }
+    };
+
+    snapBtn.onclick = () => {
+      if (!_cameraStream) return;
+      const cv = document.createElement('canvas');
+      const w = video.videoWidth || 1280;
+      const h = video.videoHeight || 720;
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(video, 0, 0, w, h);
+      cv.toBlob((blob) => {
+        if (!blob) return;
+        const file = new File([blob], `cam-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        closeCameraModal();
+        handlePhotoFile(file);
+      }, 'image/jpeg', 0.9);
+    };
+
+    flipBtn.onclick = async () => {
+      _cameraFacing = (_cameraFacing === 'environment') ? 'user' : 'environment';
+      await startStream();
+    };
+
+    closeBtn.onclick = closeCameraModal;
+    modal.onclick = (ev) => { if (ev.target === modal) closeCameraModal(); };
+
+    await startStream();
+  }
+
+  function stopStream() {
+    if (_cameraStream) {
+      try { _cameraStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+      _cameraStream = null;
+    }
+    const video = document.getElementById('cameraVideo');
+    if (video) video.srcObject = null;
+  }
+
+  function closeCameraModal() {
+    stopStream();
+    const modal = document.getElementById('cameraModal');
+    if (modal) {
+      modal.classList.remove('overlay--open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      const m = document.getElementById('cameraModal');
+      if (m && m.classList.contains('overlay--open')) closeCameraModal();
+    }
+  });
 
   // mirror the single visible context box into the contract-required #textInput
   if (backstoryInput) {

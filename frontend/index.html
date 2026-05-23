@@ -32,7 +32,6 @@
 
     <div id="photoDropzone" class="dropzone">
       <input id="photoInput" type="file" accept="image/*" hidden>
-      <input id="photoCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <img id="photoPreview" class="dropzone__preview" alt="" hidden>
       <div class="dropzone__hint">
         <span class="dropzone__icon">📸</span>
@@ -113,6 +112,20 @@
 
   <!-- REACTION RAIN LAYER (always on top) — filled by TASK-5 -->
   <div id="reactionLayer" class="reaction-layer" aria-hidden="true"></div>
+
+  <!-- CAMERA — live webcam preview + snap (desktop & mobile via getUserMedia) -->
+  <div id="cameraModal" class="overlay" role="dialog" aria-hidden="true">
+    <div class="camera">
+      <button id="cameraCloseBtn" class="btn btn--icon camera__close" title="Close" aria-label="Close camera">✕</button>
+      <div class="camera__stage">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="camera__actions">
+        <button id="cameraFlipBtn" class="btn btn--ghost">🔄 Flip</button>
+        <button id="cameraSnapBtn" class="btn btn--primary btn--lg">📸 Snap</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 
