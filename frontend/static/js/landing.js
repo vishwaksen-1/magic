@@ -1,0 +1,396 @@
+// landing.js
+window.Landing = {
+  init,
+  renderSuggestions,
+  showLoading,
+  hideLoading
+};
+
+function init() {
+  if (window.AppState && window.AppState.viewerMode) return;
+
+  const hero = document.getElementById('hero');
+  if (hero) {
+    hero.innerHTML = `
+      <h1>Drop a photo. See six takes.</h1>
+      <p>AI suggests memes built around YOUR photo. Pick one. Edit. Ship.</p>
+    `;
+  }
+
+  const modeToggle = document.getElementById('modeToggle');
+  const contextLabel = document.getElementById('contextLabel');
+  const backstoryInput = document.getElementById('backstoryInput');
+
+  const applyMode = (mode) => {
+    // dropzone is photo-only; text-mode hides it.
+    const dz = document.getElementById('photoDropzone');
+    if (dz) dz.hidden = (mode !== 'image');
+    if (contextLabel) {
+      contextLabel.innerHTML = (mode === 'image')
+        ? `What's the story? <em>(optional — we'll brew when you drop a photo)</em>`
+        : `Tell us the situation <em>(required — this is what we'll meme)</em>`;
+    }
+    if (backstoryInput) {
+      backstoryInput.placeholder = (mode === 'image')
+        ? `It's their first day and their coffee already exploded…`
+        : `My PM said 'quick win' and assigned me 14 tickets.`;
+    }
+  };
+
+  if (modeToggle) {
+    modeToggle.innerHTML = `
+      <div class="toggle">
+        <button class="toggle__option toggle__option--active" data-mode="image">From photo</button>
+        <button class="toggle__option" data-mode="text">From text</button>
+      </div>
+    `;
+    const options = modeToggle.querySelectorAll('.toggle__option');
+    options.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.target.dataset.mode;
+        const prevMode = (window.AppState && window.AppState.mode) || 'image';
+        if (mode === prevMode) return;
+        options.forEach(b => b.classList.remove('toggle__option--active'));
+        e.target.classList.add('toggle__option--active');
+        // FRESH SLATE per mode: previous mode's inputs don't leak across.
+        clearComposerState();
+        if (window.setState) window.setState({ mode, currentPhoto: null, backstory: '', textInput: '', suggestions: [], selectedSuggestion: null });
+        if (window.dispatch) window.dispatch('app:modeChanged', { mode });
+        applyMode(mode);
+      });
+    });
+    applyMode((window.AppState && window.AppState.mode) || 'image');
+  }
+
+  function clearComposerState() {
+    const dz = document.getElementById('photoDropzone');
+    const preview = document.getElementById('photoPreview');
+    const input = document.getElementById('photoInput');
+    const back = document.getElementById('backstoryInput');
+    const txt = document.getElementById('textInput');
+    if (preview) { preview.src = ''; preview.setAttribute('hidden', ''); preview.classList.add('hidden'); }
+    if (input) input.value = '';
+    if (dz) dz.classList.remove('dropzone--has-photo', 'dropzone--loading');
+    if (back) back.value = '';
+    if (txt) txt.value = '';
+    brewCount = 0;
+    const btn = document.getElementById('makeMemesBtn');
+    if (btn) btn.textContent = 'Make 6 memes →';
+  }
+
+  const photoDropzone = document.getElementById('photoDropzone');
+  const photoInput = document.getElementById('photoInput');
+  const photoPreview = document.getElementById('photoPreview');
+  
+  if (photoDropzone && photoInput) {
+    photoDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      photoDropzone.classList.add('drag-over');
+    });
+    photoDropzone.addEventListener('dragleave', () => {
+      photoDropzone.classList.remove('drag-over');
+    });
+    photoDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      photoDropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handlePhotoFile(e.dataTransfer.files[0]);
+      }
+    });
+    photoDropzone.addEventListener('click', () => {
+      photoInput.click();
+    });
+    photoInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handlePhotoFile(e.target.files[0]);
+      }
+    });
+  }
+
+  document.addEventListener('paste', (e) => {
+    if (window.AppState && window.AppState.mode === 'image' && e.clipboardData.files && e.clipboardData.files[0]) {
+      handlePhotoFile(e.clipboardData.files[0]);
+    }
+  });
+
+  async function handlePhotoFile(file) {
+    if (!file.type.startsWith('image/')) return;
+    if (photoDropzone) photoDropzone.classList.add('dropzone--loading');
+    const photo = await window.MemeAPI.uploadPhoto(file);
+    if (window.setState) window.setState({ currentPhoto: photo });
+    if (photoPreview) {
+      photoPreview.src = photo.dataUrl;
+      photoPreview.classList.remove('hidden');
+      photoPreview.removeAttribute('hidden');
+    }
+    if (photoDropzone) {
+      photoDropzone.classList.remove('dropzone--loading');
+      photoDropzone.classList.add('dropzone--has-photo');
+    }
+    if (window.dispatch) window.dispatch('app:photoSelected', { photo });
+    // auto-brew immediately — user can refine with context and "Brew again" later.
+    triggerBrew();
+  }
+
+  // mirror the single visible context box into the contract-required #textInput
+  if (backstoryInput) {
+    const textInput = document.getElementById('textInput');
+    backstoryInput.addEventListener('input', () => {
+      if (textInput) textInput.value = backstoryInput.value;
+    });
+  }
+
+  let brewInFlight = false;
+  let brewCount = 0;
+
+  async function triggerBrew() {
+    if (brewInFlight) return;
+    const state = window.AppState || {};
+    const mode = state.mode || 'image';
+    if (mode === 'image' && !state.currentPhoto) {
+      window.dispatch && window.dispatch('app:error', { message: 'Drop a photo first.', source: 'landing' });
+      return;
+    }
+    if (mode === 'text') {
+      const t = (document.getElementById('backstoryInput')?.value || '').trim();
+      if (!t) {
+        window.dispatch && window.dispatch('app:error', { message: 'Type your situation first.', source: 'landing' });
+        return;
+      }
+    }
+    brewInFlight = true;
+    const btn = document.getElementById('makeMemesBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Brewing…'; }
+    const isImage = mode === 'image';
+    showLoading(isImage ? 'Reading your photo…' : 'Reading your situation…');
+    if (window.setState) window.setState({ isLoading: true });
+    const ctx = document.getElementById('backstoryInput');
+    const txt = document.getElementById('textInput');
+    setLoadingMessage('Calling the AI…');
+    try {
+      const suggestions = await window.MemeAPI.getSuggestions({
+        mode,
+        photoId: state.currentPhoto?.id,
+        backstory: ctx ? ctx.value : '',
+        textInput: txt ? txt.value : (ctx ? ctx.value : '')
+      });
+      setLoadingMessage('Developing the polaroids…');
+      if (window.setState) window.setState({ suggestions, isLoading: false });
+      renderSuggestions(suggestions);
+    } finally {
+      hideLoading();
+      brewInFlight = false;
+      brewCount++;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = brewCount ? 'Brew again with context ↻' : 'Make 6 memes →';
+      }
+    }
+  }
+
+  const makeMemesBtn = document.getElementById('makeMemesBtn');
+  if (makeMemesBtn) makeMemesBtn.addEventListener('click', triggerBrew);
+
+  // expose for "Try again" + future "Make it weirder" hooks
+  window.Landing._brew = triggerBrew;
+
+  document.addEventListener('app:suggestionsReady', (e) => {
+    if (e.detail && e.detail.suggestions) {
+      renderSuggestions(e.detail.suggestions);
+    }
+  });
+}
+
+function renderSuggestions(suggestions) {
+  const grid = document.getElementById('suggestionsGrid');
+  const hero = document.getElementById('hero');
+  const composer = document.querySelector('.composer');
+
+  if (hero) hero.classList.add('hidden');
+  if (composer) composer.classList.add('hidden');
+
+  if (!grid) return;
+  grid.innerHTML = '';
+  grid.classList.remove('hidden');
+  grid.classList.add('suggestions-grid--carousel');
+
+  const tryAgainBar = document.createElement('div');
+  tryAgainBar.className = 'try-again-bar';
+  const tryAgainBtn = document.createElement('button');
+  tryAgainBtn.type = 'button';
+  tryAgainBtn.className = 'btn btn--ghost';
+  tryAgainBtn.textContent = '← Try again';
+  tryAgainBtn.addEventListener('click', () => {
+    if (hero) hero.classList.remove('hidden');
+    if (composer) composer.classList.remove('hidden');
+    grid.innerHTML = '';
+    grid.classList.add('hidden');
+    grid.classList.remove('suggestions-grid--carousel');
+    if (window.setState) window.setState({ suggestions: [], selectedSuggestion: null });
+  });
+  tryAgainBar.appendChild(tryAgainBtn);
+  grid.appendChild(tryAgainBar);
+
+  // ── Carousel ──
+  const wrap = document.createElement('div');
+  wrap.className = 'carousel';
+  const bubble = document.createElement('div');
+  bubble.className = 'carousel__bubble';
+  bubble.textContent = '';
+  const track = document.createElement('div');
+  track.className = 'carousel__track';
+  const prevBtn = document.createElement('button');
+  prevBtn.type = 'button';
+  prevBtn.className = 'btn btn--icon carousel__nav carousel__nav--prev';
+  prevBtn.setAttribute('aria-label', 'Previous');
+  prevBtn.textContent = '‹';
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'btn btn--icon carousel__nav carousel__nav--next';
+  nextBtn.setAttribute('aria-label', 'Next');
+  nextBtn.textContent = '›';
+  wrap.appendChild(bubble);
+  wrap.appendChild(prevBtn);
+  wrap.appendChild(track);
+  wrap.appendChild(nextBtn);
+  grid.appendChild(wrap);
+
+  const captionFor = (sug) => {
+    const vals = Object.values((sug && sug.slotValues) || {}).filter(Boolean);
+    if (vals.length) return vals.join(' · ');
+    return (sug && sug.reasoning) || 'Tap to open in editor';
+  };
+
+  const setActive = (idx) => {
+    Array.from(track.children).forEach((c, j) => c.classList.toggle('meme-card--active', j === idx));
+    bubble.textContent = captionFor(suggestions[idx]);
+  };
+
+  suggestions.forEach((sug, i) => {
+    const card = document.createElement('div');
+    card.className = 'meme-card meme-card--developing';
+    card.dataset.suggestionId = sug.id;
+    card.dataset.index = String(i);
+    card.style.animationDelay = (i * 180) + 'ms';
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'meme-thumb';
+    canvas.width = 360;
+    const cctx = canvas.getContext('2d');
+    cctx.fillStyle = '#f1ecd9';
+    cctx.fillRect(0, 0, canvas.width, canvas.height);
+    cctx.fillStyle = '#0c0c0a';
+    cctx.font = '20px Inter';
+    cctx.fillText('loading…', 20, 40);
+    card.appendChild(canvas);
+
+    track.appendChild(card);
+
+    if (window.MemeRenderer && window.MemeRenderer.renderToCanvas) {
+      window.MemeRenderer.renderToCanvas(sug, canvas);
+    }
+
+    card.addEventListener('click', () => {
+      // Make sure we scroll the picked card to center for the brief beat
+      // before the editor opens — feels intentional on mobile.
+      card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      setActive(i);
+      document.querySelectorAll('.meme-card').forEach(c => c.classList.remove('meme-card--selected'));
+      card.classList.add('meme-card--selected');
+      if (window.setState) window.setState({ selectedSuggestion: sug });
+      if (window.dispatch) window.dispatch('app:cardPicked', { suggestion: sug });
+    });
+  });
+
+  // most-centered card wins via IntersectionObserver
+  const cards = Array.from(track.querySelectorAll('.meme-card'));
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver((entries) => {
+      let best = null, bestR = 0;
+      entries.forEach(en => { if (en.intersectionRatio > bestR) { bestR = en.intersectionRatio; best = en.target; } });
+      if (best) setActive(parseInt(best.dataset.index, 10));
+    }, { root: track, threshold: [0.5, 0.75, 0.95] });
+    cards.forEach(c => obs.observe(c));
+  }
+  setActive(0);
+
+  const step = () => Math.max(240, track.clientWidth * 0.6);
+  prevBtn.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+  nextBtn.addEventListener('click', () => track.scrollBy({ left:  step(), behavior: 'smooth' }));
+}
+
+function showLoading(msg) {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.add('overlay--open');
+  setLoadingMessage(msg);
+  startParticles();
+}
+
+function setLoadingMessage(msg) {
+  const msgEl = document.getElementById('loadingMessage');
+  if (msgEl) msgEl.textContent = msg;
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('overlay--open');
+  stopParticles();
+}
+
+let _particlesStarted = false;
+function startParticles() {
+  if (_particlesStarted) return;
+  if (!window.particlesJS) {
+    // CDN didn't load (offline / blocked) — bail silently, dots are still visible.
+    return;
+  }
+  _particlesStarted = true;
+  const bg = document.getElementById('particlesBg');
+  if (bg) bg.innerHTML = ''; // wipe stale canvas from a prior brew
+  // Wait one frame so the overlay's opacity transition has committed and the
+  // container has real dimensions before particles.js measures it.
+  requestAnimationFrame(() => {
+    try {
+      window.particlesJS('particlesBg', {
+        particles: {
+          number: { value: 70, density: { enable: true, value_area: 900 } },
+          color: { value: ['#ff5b25', '#f1ecd9', '#ff8358'] },
+          shape: { type: 'circle' },
+          opacity: { value: 0.85, random: true, anim: { enable: true, speed: 1, opacity_min: 0.4, sync: false } },
+          size: { value: 5, random: true },
+          line_linked: { enable: true, distance: 140, color: '#ff5b25', opacity: 0.5, width: 1.2 },
+          move: { enable: true, speed: 3, direction: 'none', out_mode: 'out' }
+        },
+        interactivity: {
+          detect_on: 'window',
+          events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+          modes: { grab: { distance: 180, line_linked: { opacity: 0.9 } }, push: { particles_nb: 5 } }
+        },
+        retina_detect: true
+      });
+      // Kick particles.js to recompute canvas size in case the container was
+      // measuring 0×0 at init (mid-transition).
+      setTimeout(() => {
+        try {
+          if (window.pJSDom && window.pJSDom.length) {
+            const inst = window.pJSDom[window.pJSDom.length - 1].pJS;
+            if (inst && inst.fn && inst.fn.canvasSize) inst.fn.canvasSize();
+          }
+          window.dispatchEvent(new Event('resize'));
+        } catch (_) {}
+      }, 60);
+    } catch (_) { _particlesStarted = false; }
+  });
+}
+function stopParticles() {
+  if (!_particlesStarted || !window.pJSDom) return;
+  try {
+    while (window.pJSDom.length) {
+      const p = window.pJSDom.pop();
+      if (p && p.pJS && p.pJS.fn && p.pJS.fn.vendors && p.pJS.fn.vendors.destroypJS) p.pJS.fn.vendors.destroypJS();
+    }
+  } catch (_) {}
+  _particlesStarted = false;
+}
+
+// init is driven by main.js after DOMContentLoaded (avoids double-binding listeners)

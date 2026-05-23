@@ -1,0 +1,119 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0c0c0a">
+<title>Magic Lab — Make memes that don't suck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Permanent+Marker&family=Anton&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/app.css">
+<!-- QR generator removed (was unreliable, link-input + copy button cover sharing) -->
+<!-- Particle playground for the brewing screen (so the user isn't staring at a void) -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- LANDING — filled by TASK-4 -->
+  <section id="hero" class="hero"></section>
+
+  <div class="composer">
+    <div id="modeToggle" class="mode-toggle-wrap"></div>
+
+    <div id="photoDropzone" class="dropzone">
+      <input id="photoInput" type="file" accept="image/*" hidden>
+      <img id="photoPreview" class="dropzone__preview" alt="" hidden>
+      <div class="dropzone__hint">
+        <span class="dropzone__icon">📸</span>
+        <p class="dropzone__title">Drop a photo, paste it, or click</p>
+        <p class="dropzone__sub">JPG / PNG / WEBP — up to 5MB</p>
+      </div>
+    </div>
+
+    <div class="composer__inputs">
+      <label class="field" id="contextField">
+        <span class="field__label" id="contextLabel">What's the story? <em>(optional — we'll brew without it)</em></span>
+        <textarea id="backstoryInput" class="field__input" rows="2" placeholder="It's their first day and their coffee already exploded…"></textarea>
+      </label>
+      <!-- contract requires #textInput to exist; landing.js keeps it in sync with #backstoryInput -->
+      <textarea id="textInput" hidden></textarea>
+    </div>
+
+    <div class="composer__actions">
+      <button id="makeMemesBtn" class="btn btn--primary btn--lg">
+        Make 6 memes →
+      </button>
+    </div>
+  </div>
+
+  <!-- SUGGESTIONS GRID — filled by TASK-4 from suggestions[] -->
+  <section id="suggestionsGrid" class="suggestions-grid"></section>
+
+  <!-- EDITOR — filled by TASK-2 -->
+  <div id="editorModal" class="overlay" role="dialog" aria-hidden="true">
+    <div class="editor">
+      <header class="editor__header">
+        <button id="editorBackBtn" class="btn btn--ghost">← Back</button>
+        <h2 class="text-display">Editor</h2>
+        <div id="editorToolbar" class="editor__toolbar"></div>
+      </header>
+      <div class="editor__stage">
+        <canvas id="editorCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE — filled by TASK-5 -->
+  <div id="shareModal" class="overlay" role="dialog" aria-hidden="true">
+    <div class="share">
+      <button id="shareCloseBtn" class="btn btn--icon share__close" title="Close" aria-label="Close share">✕</button>
+      <h2 class="text-display">Share it.</h2>
+      <p class="text-meta">Send the link. Watch the reactions rain.</p>
+      <img id="shareMemePreview" class="share__meme" alt="Your meme" hidden>
+      <div class="share__url">
+        <input id="shareUrlInput" class="field__input" readonly>
+        <button id="shareCopyBtn" class="btn btn--icon" title="Copy">⧉</button>
+      </div>
+      <!-- QR removed (couldn't get reliably rendering in time) -->
+      <canvas id="shareQrCode" class="share__qr" hidden></canvas>
+      <div class="share__actions">
+        <button id="shareDownloadBtn" class="btn btn--primary">Download PNG</button>
+      </div>
+      <div id="reactionCounters" class="reaction-counters"></div>
+    </div>
+  </div>
+
+  <!-- VIEWER (when URL has ?view=<id>) — filled by TASK-5 -->
+  <div id="viewerOverlay" class="overlay" role="dialog" aria-hidden="true"></div>
+
+  <!-- LOADING -->
+  <div id="loadingOverlay" class="overlay loading-overlay" aria-hidden="true">
+    <div id="particlesBg" class="particles-bg" aria-hidden="true"></div>
+    <div class="loader">
+      <div class="loader__dots"><span></span><span></span><span></span></div>
+      <p id="loadingMessage" class="text-display">Reading your photo…</p>
+      <p class="loader__hint text-meta">drag the dots while you wait</p>
+    </div>
+  </div>
+
+  <!-- Memes you've kept (#4: accepted memes rail) -->
+  <section id="kepMemesRail" class="kept-rail" aria-label="Memes you've made" hidden></section>
+
+  <!-- REACTION RAIN LAYER (always on top) — filled by TASK-5 -->
+  <div id="reactionLayer" class="reaction-layer" aria-hidden="true"></div>
+
+</div>
+
+<!-- JS load order matters: TASK-1 first, then TASK-2/3/4/5, then main -->
+<script src="/static/js/templates.js"></script>
+<script src="/static/js/state.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/editor.js" defer></script>  <!-- TASK-2 -->
+<script src="/static/js/landing.js" defer></script> <!-- TASK-4 -->
+<script src="/static/js/share.js?v=react-fix-1" defer></script>   <!-- TASK-5 -->
+<script src="/static/js/main.js" defer></script>
+</body>
+</html>

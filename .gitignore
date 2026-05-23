@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+.env.example
+.DS_Store
+*.pyc
+var/
+shares/
+magic_lab.sqlite3
+otherRelevantFiles/
+*.txt
