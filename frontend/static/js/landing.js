@@ -13,7 +13,7 @@ function init() {
   if (hero) {
     const SCATTERED_STICKERS = [
       { src: 'sticker-4.png', top: '15%', left: '2%', rotate: '-12deg', width: 'clamp(70px, 12vw, 110px)', delay: '0s' },
-      { src: 'sticker-5.png', top: '65%', left: '4%', rotate: '7deg', width: 'clamp(80px, 14vw, 120px)', delay: '-1.2s' },
+      { src: 'sticker-5.png', top: '65%', left: '-4%', rotate: '7deg', width: 'clamp(80px, 14vw, 120px)', delay: '-1.2s' },
       { src: 'sticker-6.png', top: '10%', right: '2%', rotate: '18deg', width: 'clamp(90px, 15vw, 130px)', delay: '-0.5s' },
       { src: 'sticker-7.png', bottom: '5%', right: '5%', rotate: '-8deg', width: 'clamp(100px, 16vw, 140px)', delay: '-2.1s', mobileHide: true },
     ];
@@ -37,15 +37,24 @@ function init() {
     `).join('');
 
     hero.innerHTML = `
-      <div class="hero__ticker">
-        <div class="hero__ticker-track">
-          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
-          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
-          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
-          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · </span>
+      <div class="hero__ticker hero__ticker--numbers">
+        <div class="hero__ticker-track hero__ticker-track--reverse">
+          <span>🌌 42 THE ANSWER · 6-7 SIX-SEVEN · 🌿 420 BLAZE IT · 📱 5318008 FLIP UR CALC · 💞 3000 I LOVE YOU · 🕶️ 1337 L33T H4X0R · </span>
+          <span>🌌 42 THE ANSWER · 6-7 SIX-SEVEN · 🌿 420 BLAZE IT · 📱 5318008 FLIP UR CALC · 💞 3000 I LOVE YOU · 🕶️ 1337 L33T H4X0R · </span>
+          <span>🌌 42 THE ANSWER · 6-7 SIX-SEVEN · 🌿 420 BLAZE IT · 📱 5318008 FLIP UR CALC · 💞 3000 I LOVE YOU · 🕶️ 1337 L33T H4X0R · </span>
+          <span>🌌 42 THE ANSWER · 6-7 SIX-SEVEN · 🌿 420 BLAZE IT · 📱 5318008 FLIP UR CALC · 💞 3000 I LOVE YOU · 🕶️ 1337 L33T H4X0R · </span>
         </div>
       </div>
-      
+
+      <div class="hero__ticker">
+        <div class="hero__ticker-track">
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · 6️⃣7️⃣ SIX-SEVEN · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · 6️⃣7️⃣ SIX-SEVEN · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · 6️⃣7️⃣ SIX-SEVEN · </span>
+          <span>🔥 213 MEMES BREWED TODAY · 💀 NOBODY'S GETTING ANY WORK DONE · 🫡 YOU'RE NEXT · 6️⃣7️⃣ SIX-SEVEN · </span>
+        </div>
+      </div>
+
       <div class="hero__content">
         ${stickersHtml}
         
@@ -117,9 +126,20 @@ function init() {
 
   if (modeToggle) {
     modeToggle.innerHTML = `
-      <div class="toggle">
-        <button class="toggle__option toggle__option--active" data-mode="image">From photo</button>
-        <button class="toggle__option" data-mode="text">From text</button>
+      <div class="mode-toggle-row">
+        <div class="toggle">
+          <button class="toggle__option toggle__option--active" data-mode="image">From photo</button>
+          <button class="toggle__option" data-mode="text">From text</button>
+        </div>
+        <button
+          type="button"
+          id="composerRefreshBtn"
+          class="composer__refresh"
+          title="Clear and start over"
+          aria-label="Clear the photo and text"
+        >
+          <span class="composer__refresh-icon" aria-hidden="true"></span>
+        </button>
       </div>
     `;
     const options = modeToggle.querySelectorAll('.toggle__option');
@@ -138,6 +158,29 @@ function init() {
       });
     });
     applyMode((window.AppState && window.AppState.mode) || 'image');
+
+    // Refresh: clears photo/text without paying for a full page reload (we're
+    // tunnelled through one machine — full reloads cost real seconds).
+    const refreshBtn = document.getElementById('composerRefreshBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        clearComposerState();
+        if (window.setState) {
+          window.setState({
+            currentPhoto: null,
+            backstory: '',
+            textInput: '',
+            suggestions: [],
+            selectedSuggestion: null
+          });
+        }
+        // visual feedback — spin once on click
+        refreshBtn.classList.remove('composer__refresh--spin');
+        // force reflow so the animation restarts on rapid repeat clicks
+        void refreshBtn.offsetWidth;
+        refreshBtn.classList.add('composer__refresh--spin');
+      });
+    }
   }
 
   function clearComposerState() {

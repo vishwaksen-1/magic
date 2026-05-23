@@ -806,7 +806,7 @@ img, svg, canvas { display: block; max-width: 100%; }
   letter-spacing: 0.1em;
   padding: 0.4rem 0;
   white-space: nowrap;
-  transform: rotate(-2deg);
+  transform: rotate(-4deg);
   box-shadow: 0 4px 0 var(--ink);
   z-index: 10;
   border-top: 2px solid var(--ink);
@@ -1053,4 +1053,126 @@ img, svg, canvas { display: block; max-width: 100%; }
   .hero__highlight-text, .hero__sticker, .hero__polaroid {
     transition: none;
   }
+}
+
+/* ─── mode toggle row + refresh button ─────────────────────────────
+   The mode toggle and a small refresh button live on the same row.
+   Refresh clears the composer (photo + text) without a full page reload
+   (we're behind an ngrok tunnel — full reloads are painfully slow).
+   ───────────────────────────────────────────────────────────────── */
+.mode-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* the .toggle inside this row already has its own margin-bottom
+   declared earlier in this file; cancel it here so the row's margin
+   wins and the row stays vertically aligned. */
+.mode-toggle-row .toggle {
+  margin-bottom: 0;
+}
+
+.composer__refresh {
+  background: #0c0c0a;
+  border: 1.5px solid #0c0c0a;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 220ms cubic-bezier(.2,.7,.2,1),
+              border-color 220ms cubic-bezier(.2,.7,.2,1),
+              transform 220ms cubic-bezier(.2,.7,.2,1),
+              box-shadow 220ms cubic-bezier(.2,.7,.2,1);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+
+.composer__refresh:hover {
+  background: #ff5b25;
+  border-color: #ff5b25;
+  transform: translateY(-1px) rotate(-18deg);
+  box-shadow: 0 6px 14px rgba(255,91,37,.35);
+}
+
+.composer__refresh:active {
+  transform: translateY(0) rotate(-32deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
+.composer__refresh:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255,91,37,.45);
+}
+
+/* Mask the SVG so we can recolor it via background-color.
+   This dodges hardcoding fill on the SVG itself. */
+.composer__refresh-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  background-color: #f1ecd9;
+  -webkit-mask: url('../assets/landingPage/refresh-icon.svg') no-repeat center / contain;
+          mask: url('../assets/landingPage/refresh-icon.svg') no-repeat center / contain;
+  transition: background-color 220ms cubic-bezier(.2,.7,.2,1);
+  pointer-events: none;
+}
+
+.composer__refresh:hover .composer__refresh-icon {
+  background-color: #0c0c0a;
+}
+
+/* click feedback: one quick counter-clockwise spin */
+.composer__refresh--spin {
+  animation: composer-refresh-spin 520ms cubic-bezier(.2,.7,.2,1);
+}
+
+@keyframes composer-refresh-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer__refresh,
+  .composer__refresh-icon,
+  .composer__refresh--spin {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .mode-toggle-row { gap: 10px; }
+  .composer__refresh { width: 36px; height: 36px; }
+  .composer__refresh-icon { width: 18px; height: 18px; }
+}
+
+/* Yellow numbers ticker — sits under the orange one, crossed at opposite tilt */
+.hero__ticker--numbers {
+  top: 2.6rem;
+  background: #ffd60a;
+  transform: rotate(2deg);
+  z-index: 9;
+}
+
+.hero__ticker-track--reverse {
+  animation: hero-marquee-reverse 28s linear infinite;
+}
+
+@keyframes hero-marquee-reverse {
+  0% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__ticker-track--reverse { animation: none; }
+}
+
+@media (max-width: 720px) {
+  .hero__ticker--numbers { top: 2.2rem; }
 }
