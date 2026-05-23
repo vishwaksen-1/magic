@@ -80,8 +80,10 @@ function init() {
 
   const photoDropzone = document.getElementById('photoDropzone');
   const photoInput = document.getElementById('photoInput');
+  const photoCameraInput = document.getElementById('photoCameraInput');
+  const photoCameraBtn = document.getElementById('photoCameraBtn');
   const photoPreview = document.getElementById('photoPreview');
-  
+
   if (photoDropzone && photoInput) {
     photoDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -97,10 +99,24 @@ function init() {
         handlePhotoFile(e.dataTransfer.files[0]);
       }
     });
-    photoDropzone.addEventListener('click', () => {
+    photoDropzone.addEventListener('click', (e) => {
+      // don't double-trigger when the user actually meant the camera button
+      if (e.target.closest && e.target.closest('#photoCameraBtn')) return;
       photoInput.click();
     });
     photoInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handlePhotoFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (photoCameraBtn && photoCameraInput) {
+    photoCameraBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      photoCameraInput.click();
+    });
+    photoCameraInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files[0]) {
         handlePhotoFile(e.target.files[0]);
       }
@@ -302,6 +318,28 @@ function renderSuggestions(suggestions) {
     });
   });
 
+  // When the editor closes, the user's edits have been written back to the
+  // matching suggestion. Re-render that card's canvas and refresh the bubble
+  // if the user is currently looking at it.
+  const onSuggestionUpdated = (ev) => {
+    const id = ev && ev.detail && ev.detail.suggestionId;
+    if (!id) return;
+    const idx = suggestions.findIndex(s => s && s.id === id);
+    if (idx < 0) return;
+    const sug = suggestions[idx];
+    const cardEl = track.querySelector(`.meme-card[data-suggestion-id="${CSS.escape(id)}"]`);
+    if (cardEl) {
+      const cv = cardEl.querySelector('canvas.meme-thumb');
+      if (cv && window.MemeRenderer && window.MemeRenderer.renderToCanvas) {
+        window.MemeRenderer.renderToCanvas(sug, cv);
+      }
+    }
+    if (cardEl && cardEl.classList.contains('meme-card--active')) {
+      bubble.textContent = captionFor(sug);
+    }
+  };
+  document.addEventListener('app:suggestionUpdated', onSuggestionUpdated);
+
   // most-centered card wins via IntersectionObserver
   const cards = Array.from(track.querySelectorAll('.meme-card'));
   if ('IntersectionObserver' in window) {
@@ -337,16 +375,28 @@ function hideLoading() {
   stopParticles();
 }
 
-let _particlesStarted = false;
-function startParticles() {
-  if (_particlesStarted) return;
-  if (!window.particlesJS) {
-    // CDN didn't load (offline / blocked) — bail silently, dots are still visible.
-    return;
+function _nukeParticles() {
+  // Aggressively dismantle any prior particles.js instance(s). v2.0's
+  // destroypJS leaves dangling entries in pJSDom on some browsers, which
+  // makes a second particlesJS('particlesBg', ...) fail silently.
+  if (window.pJSDom && window.pJSDom.length) {
+    try {
+      window.pJSDom.forEach(p => {
+        const v = p && p.pJS && p.pJS.fn && p.pJS.fn.vendors;
+        if (v && v.destroypJS) v.destroypJS();
+      });
+    } catch (_) {}
   }
-  _particlesStarted = true;
+  window.pJSDom = [];
   const bg = document.getElementById('particlesBg');
-  if (bg) bg.innerHTML = ''; // wipe stale canvas from a prior brew
+  if (bg) bg.innerHTML = '';
+}
+
+function startParticles() {
+  if (!window.particlesJS) return;            // CDN blocked — bail silently
+  const bg = document.getElementById('particlesBg');
+  if (!bg) return;
+  _nukeParticles();                           // always start from a clean slate
   // Wait one frame so the overlay's opacity transition has committed and the
   // container has real dimensions before particles.js measures it.
   requestAnimationFrame(() => {
@@ -379,18 +429,12 @@ function startParticles() {
           window.dispatchEvent(new Event('resize'));
         } catch (_) {}
       }, 60);
-    } catch (_) { _particlesStarted = false; }
+    } catch (_) {}
   });
 }
+
 function stopParticles() {
-  if (!_particlesStarted || !window.pJSDom) return;
-  try {
-    while (window.pJSDom.length) {
-      const p = window.pJSDom.pop();
-      if (p && p.pJS && p.pJS.fn && p.pJS.fn.vendors && p.pJS.fn.vendors.destroypJS) p.pJS.fn.vendors.destroypJS();
-    }
-  } catch (_) {}
-  _particlesStarted = false;
+  _nukeParticles();
 }
 
 // init is driven by main.js after DOMContentLoaded (avoids double-binding listeners)

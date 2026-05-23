@@ -10,6 +10,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Permanent+Marker&family=Anton&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/app.css">
+<!-- Warm the template assets on page load so the tunnel has them ready by the time
+     the user brews. Without this, cold CDN cache + slow tunnel = "image not found"
+     on first render. crossorigin matches the canvas's anonymous fetch. -->
+<link rel="preload" as="image" href="/static/assets/templates/drake.jpg" crossorigin="anonymous">
+<link rel="preload" as="image" href="/static/assets/templates/two-buttons.jpg" crossorigin="anonymous">
+<link rel="preload" as="image" href="/static/assets/templates/this-is-fine.jpg" crossorigin="anonymous">
+<link rel="preload" as="image" href="/static/assets/templates/expanding-brain.jpg" crossorigin="anonymous">
 <!-- QR generator removed (was unreliable, link-input + copy button cover sharing) -->
 <!-- Particle playground for the brewing screen (so the user isn't staring at a void) -->
 <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
@@ -25,11 +32,13 @@
 
     <div id="photoDropzone" class="dropzone">
       <input id="photoInput" type="file" accept="image/*" hidden>
+      <input id="photoCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <img id="photoPreview" class="dropzone__preview" alt="" hidden>
       <div class="dropzone__hint">
         <span class="dropzone__icon">📸</span>
         <p class="dropzone__title">Drop a photo, paste it, or click</p>
         <p class="dropzone__sub">JPG / PNG / WEBP — up to 5MB</p>
+        <button type="button" id="photoCameraBtn" class="btn btn--ghost dropzone__camera">📷 Use camera</button>
       </div>
     </div>
 

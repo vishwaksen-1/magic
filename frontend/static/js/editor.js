@@ -22,13 +22,33 @@
   function loadImage(src) {
     if (!src) return Promise.reject(new Error('no src'));
     if (imgCache.has(src)) return imgCache.get(src);
-    const p = new Promise((resolve, reject) => {
+    // Tunnel/CDN can serve a stale 502 on cold-start; retry a couple times
+    // with backoff before giving up. Rejected promises are NOT cached, so a
+    // later caller gets a fresh attempt.
+    const attempt = (n) => new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('image load failed: ' + src));
+      img.onerror = () => {
+        if (n > 0) {
+          // cache-bust on retry so a broken CDN cache entry can't keep biting
+          const sep = src.indexOf('?') === -1 ? '?' : '&';
+          const retrySrc = src + sep + '_r=' + (3 - n);
+          setTimeout(() => {
+            const r = new Image();
+            r.crossOrigin = 'anonymous';
+            r.onload  = () => resolve(r);
+            r.onerror = () => attempt(n - 1).then(resolve, reject);
+            r.src = retrySrc;
+          }, 400 * (3 - n));
+        } else {
+          reject(new Error('image load failed: ' + src));
+        }
+      };
       img.src = src;
     });
+    const p = attempt(2);
+    p.catch(() => imgCache.delete(src));   // don't poison the cache with a failure
     imgCache.set(src, p);
     return p;
   }
@@ -239,11 +259,18 @@
     }
     const dims = clampToMax(bgW, bgH, MAX_RENDER_SIDE);
 
+    // Work on a CLONE of slotValues so no editor-internal operation
+    // (regenerateCaption picks another suggestion's slotValues by reference,
+    // inline edits mutate layer.text, etc.) can leak across cards.
+    const workingSug = { ...suggestion, slotValues: { ...(suggestion.slotValues || {}) } };
+
     session = {
-      suggestion, template,
+      suggestion: workingSug,
+      originalSuggestion: suggestion,   // for write-back on close
+      template,
       bgImg,
       bufW: dims.w, bufH: dims.h,
-      layers: deriveLayers(template, suggestion, dims.w, dims.h),
+      layers: deriveLayers(template, workingSug, dims.w, dims.h),
       selectedLayerId: null,
       drag: null,
       toolbar: null
@@ -261,6 +288,17 @@
   }
 
   function closeEditor() {
+    // Persist whatever the user edited back to the original suggestion so
+    // the grid card preview can be refreshed and a re-open shows their work.
+    let persistedId = null;
+    if (session && session.originalSuggestion) {
+      const orig = session.originalSuggestion;
+      orig.slotValues = orig.slotValues || {};
+      for (const layer of session.layers) {
+        if (layer && layer.slotId != null) orig.slotValues[layer.slotId] = layer.text;
+      }
+      persistedId = orig.id || null;
+    }
     const modal = document.getElementById('editorModal');
     if (modal) {
       modal.classList.remove('overlay--open');
@@ -272,6 +310,7 @@
     const inp = document.querySelector('.editor__inline-input');
     if (inp) inp.remove();
     session = null;
+    if (persistedId) window.dispatch('app:suggestionUpdated', { suggestionId: persistedId });
     window.dispatch('app:editorClosed', {});
   }
 

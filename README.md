@@ -68,12 +68,19 @@ http://localhost:8000/
 
 ## Temporary Public Deployment
 
-Use localtunnel for the short demo window:
+Use the helper script for the short demo window:
 
 ```bash
-npx --yes localtunnel --port 8000
+./deploy.sh
 ```
 
+It starts FastAPI on port `8000`, opens a localtunnel URL, and writes runtime logs/state under `var/`.
+
+Stop the temporary deployment:
+
+```bash
+./undeploy.sh
+```
 
 ## Notes
 

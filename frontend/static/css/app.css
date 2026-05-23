@@ -338,6 +338,7 @@ img, svg, canvas { display: block; max-width: 100%; }
 .dropzone__icon { font-size: 36px; line-height: 1; }
 .dropzone__title { margin: 4px 0 0; font-weight: 600; }
 .dropzone__sub { margin: 0; opacity: .6; font-size: 13px; }
+.dropzone__camera { margin-top: 10px; font-size: 13px; padding: 8px 14px; }
 
 #photoDropzone.drag-over {
   background: rgba(255, 91, 37, 0.1);
