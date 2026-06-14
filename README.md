@@ -13,13 +13,11 @@ Magic Lab is a single-page meme-maker prototype. Users can upload a photo or des
 │       ├── css/app.css           # UI styles
 │       ├── js/                   # browser modules
 │       └── assets/templates/     # meme template images
-├── var/                          # local runtime data, ignored by git
-│   ├── magic_lab.sqlite3
-│   └── shares/
-├── tasks/                        # task briefs
-├── prompts/                      # implementation prompts
-├── otherRelevantFiles/           # contracts, context, deployment notes, work log
-└── .env.example
+├── var/                          # local runtime data, (ignored by git)
+├── deploy.sh                     # temporary public deployment via localtunnel
+├── undeploy.sh                   # stop temporary public deployment
+├── README.md                     # this file
+└── .env.example                  # example environment variables including OpenRouter API key
 ```
 
 ## Requirements
